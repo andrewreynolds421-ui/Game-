@@ -3,13 +3,15 @@ using TransformationFPS.Abilities;
 using TransformationFPS.Enemies;
 using TransformationFPS.Player;
 using TransformationFPS.UI;
+using TransformationFPS.World;
 
 namespace TransformationFPS.Bootstrap
 {
     /// <summary>
-    /// Procedurally builds a playable test arena (ground, light, player, enemy dummies) the moment
-    /// any scene loads with no existing Player object. This means the project is playable from a
-    /// completely blank Unity scene - open the project, create/open any scene, press Play.
+    /// Procedurally builds a playable open-world test scene (streaming terrain, light, player,
+    /// enemy dummies) the moment any scene loads with no existing Player object. This means the
+    /// project is playable from a completely blank Unity scene - open the project, create/open
+    /// any scene, press Play.
     ///
     /// This exists because hand-authoring a .unity scene file as text (outside the Editor) is
     /// fragile: GameObject/component references are wired by internal file IDs and GUIDs that are
@@ -18,8 +20,6 @@ namespace TransformationFPS.Bootstrap
     /// </summary>
     public static class GameBootstrap
     {
-        private const float ArenaHalfSize = 40f;
-
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
@@ -29,10 +29,12 @@ namespace TransformationFPS.Bootstrap
             }
 
             BuildLighting();
-            BuildGround();
-            BuildObstacles();
-            BuildEnemyDummies();
-            BuildPlayer();
+
+            var terrain = BuildTerrainStreaming();
+            var player = BuildPlayer(terrain);
+            terrain.target = player.transform;
+
+            BuildEnemyDummies(terrain);
         }
 
         private static void BuildLighting()
@@ -48,50 +50,19 @@ namespace TransformationFPS.Bootstrap
             RenderSettings.ambientGroundColor = new Color(0.25f, 0.22f, 0.2f);
         }
 
-        private static void BuildGround()
+        private static TerrainStreamingManager BuildTerrainStreaming()
         {
-            var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            ground.name = "Ground";
-            ground.transform.localScale = new Vector3(ArenaHalfSize / 5f, 1f, ArenaHalfSize / 5f);
-            TintRenderer(ground.GetComponent<Renderer>(), new Color(0.3f, 0.32f, 0.28f));
+            var go = new GameObject("Terrain Streaming");
+            return go.AddComponent<TerrainStreamingManager>();
         }
 
-        private static void BuildObstacles()
-        {
-            var rng = new System.Random(1234);
-            for (int i = 0; i < 12; i++)
-            {
-                var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                cube.name = $"Obstacle_{i}";
-                float x = (float)(rng.NextDouble() * 2 - 1) * (ArenaHalfSize - 5f);
-                float z = (float)(rng.NextDouble() * 2 - 1) * (ArenaHalfSize - 5f);
-                float height = 1f + (float)rng.NextDouble() * 3f;
-                cube.transform.position = new Vector3(x, height / 2f, z);
-                cube.transform.localScale = new Vector3(2f, height, 2f);
-                TintRenderer(cube.GetComponent<Renderer>(), new Color(0.4f, 0.38f, 0.42f));
-            }
-        }
-
-        private static void BuildEnemyDummies()
-        {
-            var rng = new System.Random(5678);
-            for (int i = 0; i < 5; i++)
-            {
-                var dummy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-                dummy.name = $"EnemyDummy_{i}";
-                float x = (float)(rng.NextDouble() * 2 - 1) * (ArenaHalfSize - 8f);
-                float z = (float)(rng.NextDouble() * 2 - 1) * (ArenaHalfSize - 8f);
-                dummy.transform.position = new Vector3(x, 1f, z);
-                TintRenderer(dummy.GetComponent<Renderer>(), new Color(0.75f, 0.2f, 0.2f));
-                dummy.AddComponent<EnemyDummy>();
-            }
-        }
-
-        private static void BuildPlayer()
+        private static GameObject BuildPlayer(TerrainStreamingManager terrain)
         {
             var player = new GameObject("Player");
             player.tag = "Player";
-            player.transform.position = new Vector3(0f, 1.1f, -5f);
+
+            float spawnHeight = terrain.SampleHeight(0f, 0f);
+            player.transform.position = new Vector3(0f, spawnHeight + 1.1f, 0f);
 
             var visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             visual.name = "Body";
@@ -110,6 +81,7 @@ namespace TransformationFPS.Bootstrap
             cameraGO.transform.localPosition = new Vector3(0f, 1.7f, 0f);
             var cam = cameraGO.AddComponent<Camera>();
             cam.nearClipPlane = 0.05f;
+            cam.farClipPlane = 2000f;
             cameraGO.AddComponent<AudioListener>();
 
             var movement = player.AddComponent<FirstPersonController>();
@@ -124,6 +96,25 @@ namespace TransformationFPS.Bootstrap
             transformationManager.equippedForm = SampleFormLibrary.CreateBeastForm();
 
             player.AddComponent<SimpleHud>();
+
+            return player;
+        }
+
+        private static void BuildEnemyDummies(TerrainStreamingManager terrain)
+        {
+            var rng = new System.Random(5678);
+            for (int i = 0; i < 5; i++)
+            {
+                float x = (float)(rng.NextDouble() * 2 - 1) * 30f;
+                float z = (float)(rng.NextDouble() * 2 - 1) * 30f;
+                float y = terrain.SampleHeight(x, z);
+
+                var dummy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                dummy.name = $"EnemyDummy_{i}";
+                dummy.transform.position = new Vector3(x, y + 1f, z);
+                TintRenderer(dummy.GetComponent<Renderer>(), new Color(0.75f, 0.2f, 0.2f));
+                dummy.AddComponent<EnemyDummy>();
+            }
         }
 
         private static void TintRenderer(Renderer renderer, Color color)

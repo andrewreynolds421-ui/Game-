@@ -6,10 +6,16 @@ the "super" is a full-body transformation into a more powerful form.
 
 ## Status
 
-This is the first playable slice: **the transformation ability system**,
-plus enough FPS scaffolding (movement, shooting, health/shields, a couple
-enemy dummies) to actually feel it out. It is not open-world yet — it's a
-small flat test arena.
+Two playable slices so far:
+
+- **The transformation ability system** — Destiny-style melee/grenade/class-
+  ability/super kit where the super is a full-body transformation.
+- **Open-world terrain streaming** — procedurally generated Terrain chunks
+  that load/unload around the player as they move, replacing the earlier
+  small flat test arena.
+
+Traversal (mount/sparrow-equivalent, grapple, etc.) and real content
+(weapon variety, enemy AI) are not built yet — see "Not yet built" below.
 
 ## Requirements
 
@@ -58,6 +64,7 @@ Assets/Scripts/
   Abilities/    AbilityDefinition, TransformationForm (ScriptableObjects),
                 TransformationManager, SampleFormLibrary
   Enemies/      EnemyDummy — simple respawning combat target
+  World/        TerrainNoiseProfile, TerrainChunkBuilder, TerrainStreamingManager
   UI/           SimpleHud — OnGUI debug readout (health/ammo/cooldowns)
   Bootstrap/    GameBootstrap — procedurally builds the test scene at Play time
 ```
@@ -82,6 +89,33 @@ Assets/Scripts/
   files created via the Editor's `Create > TransformationFPS > ...` menus
   (the `[CreateAssetMenu]` attributes are already on both classes).
 
+### Open-world terrain streaming
+
+- **`TerrainNoiseProfile`** is a multi-octave (fractal) Perlin noise sampler,
+  evaluated in **world-space** coordinates rather than per-chunk local ones.
+  Because every chunk queries the same continuous function, adjacent chunks'
+  heights match exactly at their shared edge — no explicit seam-stitching
+  needed for the heightmap itself.
+- **`TerrainChunkBuilder`** turns one grid coordinate into a real Unity
+  `Terrain` GameObject: builds a heightmap from the noise profile, assigns a
+  runtime-generated `TerrainLayer` (a flat-color texture, since no art
+  assets exist yet), and positions it in the world.
+- **`TerrainStreamingManager`** tracks the player's current chunk and keeps
+  a square of chunks loaded around them (`viewDistanceInChunks`, default 2 →
+  a 5×5 grid). It loads the starting chunks synchronously in `Start()` so
+  the ground exists before the first physics step, then throttles further
+  loads to `maxChunkLoadsPerFrame` (default 1) as the player moves, to avoid
+  hitches. Chunks outside a one-chunk buffer past view distance are
+  unloaded (destroyed) — since terrain is procedural, nothing needs to be
+  saved; walking back regenerates identical terrain from the same noise
+  profile. Neighboring chunks are linked via `Terrain.SetNeighbors` so
+  normals blend cleanly across seams.
+- Tune `chunkSize`, `heightmapResolution`, `viewDistanceInChunks` and the
+  noise profile's `scale` / `octaves` / `heightMultiplier` on the
+  `TerrainStreamingManager` component (find it under the "Terrain
+  Streaming" GameObject at Play time, or adjust the defaults in
+  `GameBootstrap.BuildTerrainStreaming`).
+
 ### Design intent for "transformation"
 
 Transformation is treated as a **fantasy/sci-fi ability system** — a
@@ -91,10 +125,13 @@ sexual content, and this project won't be extended in that direction.
 
 ## Not yet built
 
-- Open-world traversal (streaming terrain, loading zones) — current arena
-  is a small flat test space.
+- Traversal aids for open-world scale (mount/sparrow-equivalent, grapple,
+  fast travel / loading zones).
+- World decoration (trees, rocks, points of interest) — terrain is
+  currently bare rolling hills with no scattered props.
 - Real weapon variety / loadout system.
-- Enemy AI (current dummies are stationary targets).
+- Enemy AI (current dummies are stationary targets, and are placed near the
+  world origin rather than distributed across streamed chunks).
 - Real UI (current HUD is `OnGUI` debug text).
 - Adaptation ability effects (cooldown/event wiring exists; per-form effects
   like phase-step or regen fields are not implemented yet).
