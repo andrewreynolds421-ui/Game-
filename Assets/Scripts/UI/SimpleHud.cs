@@ -13,23 +13,35 @@ namespace TransformationFPS.UI
         private PlayerStats _stats;
         private WeaponController _weapon;
         private TransformationManager _transformation;
+        private VehicleMountController _vehicleMount;
 
         private void Awake()
         {
             _stats = GetComponent<PlayerStats>();
             _weapon = GetComponent<WeaponController>();
             _transformation = GetComponent<TransformationManager>();
+            _vehicleMount = GetComponent<VehicleMountController>();
         }
 
         private void OnGUI()
         {
             const int pad = 16;
-            int y = Screen.height - 140;
+            int y = Screen.height - 160;
+
+            if (_vehicleMount != null && _vehicleMount.IsMounted)
+            {
+                GUI.Label(new Rect(pad, y, 400, 24), $"Riding (V to dismount)   Speed: {_vehicleMount.ActiveVehicle.CurrentSpeed:0} m/s");
+                y += 22;
+            }
 
             GUI.Label(new Rect(pad, y, 400, 24), $"Health: {_stats.CurrentHealth:0} / {_stats.maxHealth:0}   Shield: {_stats.CurrentShield:0} / {_stats.maxShield:0}");
             y += 22;
-            GUI.Label(new Rect(pad, y, 400, 24), $"Ammo: {_weapon.CurrentAmmo}/{_weapon.magazineSize}{(_weapon.IsReloading ? " (reloading)" : string.Empty)}");
-            y += 22;
+
+            if (_vehicleMount == null || !_vehicleMount.IsMounted)
+            {
+                GUI.Label(new Rect(pad, y, 400, 24), $"Ammo: {_weapon.CurrentAmmo}/{_weapon.magazineSize}{(_weapon.IsReloading ? " (reloading)" : string.Empty)}");
+                y += 22;
+            }
 
             if (_transformation.equippedForm != null)
             {
@@ -40,7 +52,10 @@ namespace TransformationFPS.UI
                     $"MorphBolt(G): {(_transformation.MorphBoltCooldownRemaining > 0f ? _transformation.MorphBoltCooldownRemaining.ToString("0.0") : "Ready")}   " +
                     $"Adaptation(Q): {(_transformation.AdaptationCooldownRemaining > 0f ? _transformation.AdaptationCooldownRemaining.ToString("0.0") : "Ready")}   " +
                     $"Ultimate(X): {(_transformation.ultimateEnergy >= 100f ? "Ready" : "Charging")}");
+                y += 22;
             }
+
+            GUI.Label(new Rect(pad, y, 400, 24), "V: Summon/Mount Hover Vehicle");
         }
     }
 }

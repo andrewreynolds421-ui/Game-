@@ -6,16 +6,19 @@ the "super" is a full-body transformation into a more powerful form.
 
 ## Status
 
-Two playable slices so far:
+Three playable slices so far:
 
 - **The transformation ability system** — Destiny-style melee/grenade/class-
   ability/super kit where the super is a full-body transformation.
 - **Open-world terrain streaming** — procedurally generated Terrain chunks
   that load/unload around the player as they move, replacing the earlier
   small flat test arena.
+- **Hover vehicle (Sparrow-equivalent)** — summon/mount/dismount a
+  physics-based hover vehicle for covering the streamed world quickly.
 
-Traversal (mount/sparrow-equivalent, grapple, etc.) and real content
-(weapon variety, enemy AI) are not built yet — see "Not yet built" below.
+On-foot traversal tech (multi-jump/glide tied to Forms, sprint-slide,
+mantling) and real content (weapon variety, enemy AI) are not built yet —
+see "Not yet built" below.
 
 ## Requirements
 
@@ -54,17 +57,24 @@ scene and press Play, no manual GameObject wiring required.
 | G | Morph Bolt (grenade-equivalent) |
 | Q | Adaptation (class-ability-equivalent) |
 | X | Ultimate — full-body Transformation |
+| V | Summon/mount, or dismount, the hover vehicle |
+| A/D (while mounted) | Steer vehicle |
+| W/S (while mounted) | Throttle / brake-reverse |
+| Left Shift (while mounted) | Boost |
+| Mouse (while mounted) | Free-look, independent of vehicle heading |
 
 ## Architecture
 
 ```
 Assets/Scripts/
   Core/         IDamageable — shared damage interface for player + enemies
-  Player/       FirstPersonController, PlayerStats (health/shield), WeaponController
+  Player/       FirstPersonController, PlayerStats (health/shield), WeaponController,
+                VehicleMountController
   Abilities/    AbilityDefinition, TransformationForm (ScriptableObjects),
                 TransformationManager, SampleFormLibrary
   Enemies/      EnemyDummy — simple respawning combat target
   World/        TerrainNoiseProfile, TerrainChunkBuilder, TerrainStreamingManager
+  Vehicles/     HoverVehicleController, VehicleFactory
   UI/           SimpleHud — OnGUI debug readout (health/ammo/cooldowns)
   Bootstrap/    GameBootstrap — procedurally builds the test scene at Play time
 ```
@@ -116,6 +126,34 @@ Assets/Scripts/
   Streaming" GameObject at Play time, or adjust the defaults in
   `GameBootstrap.BuildTerrainStreaming`).
 
+### Hover vehicle (Sparrow-equivalent)
+
+- **`HoverVehicleController`** is a `Rigidbody`-based hover craft: a downward
+  raycast drives a spring/damper force that holds it at `hoverHeight` above
+  whatever's beneath it (terrain or anything else with a collider), forward
+  thrust and yaw torque from drive input move it, and a separate upright
+  stabilization torque keeps it level regardless of terrain slope — without
+  fighting the steering torque, since it only corrects tilt, not heading.
+  When nobody's driving it (`IsPlayerControlled = false`), it just idles,
+  hovering in place, which is also its resting state after a dismount.
+- **`VehicleFactory`** builds the vehicle from primitives at runtime, same
+  approach as `GameBootstrap` uses for the rest of the scene.
+- **`VehicleMountController`** (on the player) handles summon/mount/dismount
+  on **V**. The key design choice: on mount, the *player* is reparented
+  under the vehicle (not just the camera). Since `Transform.position` always
+  reports world space regardless of parent, everything that already reads
+  the player's transform — `TerrainStreamingManager.target` for chunk
+  streaming, `EnemyDummy`'s `FindGameObjectWithTag("Player")` — keeps
+  working automatically while riding, with no extra per-frame sync code.
+  On-foot movement and the weapon are disabled while mounted; the mouse
+  free-looks independently of the vehicle's heading (rotating only the
+  camera pivot), and A/D steering applies torque to the vehicle itself.
+  Dismounting drops the player just behind the vehicle, raycast down to the
+  actual ground height, facing the direction the vehicle was heading.
+- Pressing **V** again always teleports the same vehicle instance to just
+  in front of the player (matching Destiny's Sparrow-summon behavior)
+  rather than spawning duplicates.
+
 ### Design intent for "transformation"
 
 Transformation is treated as a **fantasy/sci-fi ability system** — a
@@ -125,8 +163,9 @@ sexual content, and this project won't be extended in that direction.
 
 ## Not yet built
 
-- Traversal aids for open-world scale (mount/sparrow-equivalent, grapple,
-  fast travel / loading zones).
+- On-foot movement tech: per-Form aerial move (double-jump/glide/blink),
+  sprint-slide, ledge mantling.
+- Other traversal aids: grapple, fast travel / loading zones.
 - World decoration (trees, rocks, points of interest) — terrain is
   currently bare rolling hills with no scattered props.
 - Real weapon variety / loadout system.

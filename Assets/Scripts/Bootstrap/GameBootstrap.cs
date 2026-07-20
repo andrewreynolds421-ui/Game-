@@ -95,6 +95,8 @@ namespace TransformationFPS.Bootstrap
             var transformationManager = player.AddComponent<TransformationManager>();
             transformationManager.equippedForm = SampleFormLibrary.CreateBeastForm();
 
+            player.AddComponent<VehicleMountController>();
+
             player.AddComponent<SimpleHud>();
 
             return player;

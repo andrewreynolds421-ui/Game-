@@ -64,6 +64,20 @@ namespace TransformationFPS.Player
             HandleMovement();
         }
 
+        /// <summary>
+        /// Realigns internal look state to a level camera pivot. Used after dismounting a
+        /// vehicle, where the camera pivot may have been reoriented by mounted free-look and
+        /// would otherwise snap unpredictably on the first post-dismount mouse move.
+        /// </summary>
+        public void ResetLook(float pitchDegrees = 0f)
+        {
+            _pitch = pitchDegrees;
+            if (cameraPivot != null)
+            {
+                cameraPivot.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
+            }
+        }
+
         private void HandleLook()
         {
             float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
