@@ -24,6 +24,10 @@ namespace TransformationFPS.Abilities
             form.ultimateSpeedMultiplier = 1.4f;
             form.ultimateDamageMultiplier = 2.2f;
 
+            form.aerialMoveType = AerialMoveType.MultiJump;
+            form.extraAirJumps = 1;
+            form.airJumpHeightMultiplier = 0.9f;
+
             form.meleeAbility = MakeAbility("Rending Claw", AbilitySlot.Melee, 3.5f, 0f, damage: 45f);
             form.morphBoltAbility = MakeAbility("Pounce Bolt", AbilitySlot.MorphBolt, 12f, 0f, damage: 60f, radius: 3f);
             form.adaptationAbility = MakeAbility("Quickstep", AbilitySlot.Adaptation, 8f, 0f);
@@ -46,6 +50,11 @@ namespace TransformationFPS.Abilities
             form.ultimateSpeedMultiplier = 1.15f;
             form.ultimateDamageMultiplier = 1.8f;
 
+            form.aerialMoveType = AerialMoveType.Glide;
+            form.glideDuration = 1.8f;
+            form.glideFallSpeed = 2.5f;
+            form.glideForwardSpeed = 10f;
+
             form.meleeAbility = MakeAbility("Cinder Fist", AbilitySlot.Melee, 4f, 0f, damage: 35f);
             form.morphBoltAbility = MakeAbility("Magma Bolt", AbilitySlot.MorphBolt, 14f, 0f, damage: 70f, radius: 5f);
             form.adaptationAbility = MakeAbility("Ash Veil", AbilitySlot.Adaptation, 10f, 0f);
@@ -67,6 +76,10 @@ namespace TransformationFPS.Abilities
             form.ultimateTintColor = new Color(0.55f, 0.75f, 0.95f, 0.8f);
             form.ultimateSpeedMultiplier = 1.5f;
             form.ultimateDamageMultiplier = 1.4f;
+
+            form.aerialMoveType = AerialMoveType.Blink;
+            form.blinkDistance = 14f;
+            form.blinkCooldown = 2.5f;
 
             form.meleeAbility = MakeAbility("Phase Strike", AbilitySlot.Melee, 3f, 0f, damage: 30f);
             form.morphBoltAbility = MakeAbility("Wisp Bolt", AbilitySlot.MorphBolt, 10f, 0f, damage: 40f, radius: 4f);

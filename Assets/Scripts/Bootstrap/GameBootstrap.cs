@@ -35,6 +35,7 @@ namespace TransformationFPS.Bootstrap
             terrain.target = player.transform;
 
             BuildEnemyDummies(terrain);
+            BuildTraversalTestCourse(terrain);
         }
 
         private static void BuildLighting()
@@ -96,6 +97,8 @@ namespace TransformationFPS.Bootstrap
             transformationManager.equippedForm = SampleFormLibrary.CreateBeastForm();
 
             player.AddComponent<VehicleMountController>();
+            player.AddComponent<AerialMobilityController>();
+            player.AddComponent<LedgeMantleController>();
 
             player.AddComponent<SimpleHud>();
 
@@ -117,6 +120,38 @@ namespace TransformationFPS.Bootstrap
                 TintRenderer(dummy.GetComponent<Renderer>(), new Color(0.75f, 0.2f, 0.2f));
                 dummy.AddComponent<EnemyDummy>();
             }
+        }
+
+        /// <summary>
+        /// A few simple structures near spawn purely to give the new traversal systems something
+        /// to interact with: ascending steps for ledge mantling, and a gap that requires an aerial
+        /// move (multi-jump / glide / blink, depending on the equipped Form) to cross on foot.
+        /// </summary>
+        private static void BuildTraversalTestCourse(TerrainStreamingManager terrain)
+        {
+            Vector3 origin = new Vector3(15f, 0f, 15f);
+
+            float[] stepHeights = { 0.6f, 1.2f, 1.8f };
+            for (int i = 0; i < stepHeights.Length; i++)
+            {
+                Vector3 pos = origin + new Vector3(0f, 0f, i * 2.5f);
+                float baseY = terrain.SampleHeight(pos.x, pos.z);
+
+                var step = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                step.name = $"MantleStep_{i}";
+                step.transform.position = new Vector3(pos.x, baseY + stepHeights[i] / 2f, pos.z);
+                step.transform.localScale = new Vector3(3f, stepHeights[i], 2f);
+                TintRenderer(step.GetComponent<Renderer>(), new Color(0.5f, 0.45f, 0.3f));
+            }
+
+            Vector3 gapPos = origin + new Vector3(0f, 0f, stepHeights.Length * 2.5f + 9f);
+            float gapBaseY = terrain.SampleHeight(gapPos.x, gapPos.z);
+
+            var farPlatform = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            farPlatform.name = "GapPlatform";
+            farPlatform.transform.position = new Vector3(gapPos.x, gapBaseY + 1f, gapPos.z);
+            farPlatform.transform.localScale = new Vector3(4f, 2f, 4f);
+            TintRenderer(farPlatform.GetComponent<Renderer>(), new Color(0.3f, 0.5f, 0.35f));
         }
 
         private static void TintRenderer(Renderer renderer, Color color)

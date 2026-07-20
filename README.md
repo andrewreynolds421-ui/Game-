@@ -6,7 +6,7 @@ the "super" is a full-body transformation into a more powerful form.
 
 ## Status
 
-Three playable slices so far:
+Four playable slices so far:
 
 - **The transformation ability system** — Destiny-style melee/grenade/class-
   ability/super kit where the super is a full-body transformation.
@@ -15,9 +15,11 @@ Three playable slices so far:
   small flat test arena.
 - **Hover vehicle (Sparrow-equivalent)** — summon/mount/dismount a
   physics-based hover vehicle for covering the streamed world quickly.
+- **On-foot movement kit** — a per-Form aerial move (double-jump / glide /
+  blink, matching Beastkin / Emberkin / Wraithkin), sprint-slide, and
+  auto-mantling over ledges.
 
-On-foot traversal tech (multi-jump/glide tied to Forms, sprint-slide,
-mantling) and real content (weapon variety, enemy AI) are not built yet —
+Real content (weapon variety, enemy AI, world decoration) is not built yet —
 see "Not yet built" below.
 
 ## Requirements
@@ -48,8 +50,11 @@ scene and press Play, no manual GameObject wiring required.
 | WASD | Move |
 | Mouse | Look |
 | Space | Jump |
+| Space (while airborne) | Aerial move — multi-jump / glide / blink, depending on equipped Form |
 | Left Shift (+ W) | Sprint |
 | C | Crouch |
+| C (while sprinting) | Slide |
+| (walk into a ledge within reach) | Auto-mantle |
 | Left Click | Fire |
 | Right Click | Aim down sights |
 | R | Reload |
@@ -69,7 +74,7 @@ scene and press Play, no manual GameObject wiring required.
 Assets/Scripts/
   Core/         IDamageable — shared damage interface for player + enemies
   Player/       FirstPersonController, PlayerStats (health/shield), WeaponController,
-                VehicleMountController
+                VehicleMountController, AerialMobilityController, LedgeMantleController
   Abilities/    AbilityDefinition, TransformationForm (ScriptableObjects),
                 TransformationManager, SampleFormLibrary
   Enemies/      EnemyDummy — simple respawning combat target
@@ -154,6 +159,45 @@ Assets/Scripts/
   in front of the player (matching Destiny's Sparrow-summon behavior)
   rather than spawning duplicates.
 
+### On-foot movement kit
+
+- **`FirstPersonController`** now exposes a small public API instead of
+  keeping all movement state private, so other systems can drive or
+  momentarily take over movement without duplicating its velocity/gravity/
+  collision handling: `VerticalVelocity` (get/set), `FallSpeedClamp` (a max
+  fall speed other systems can clamp temporarily), `PerformJumpImpulse`
+  (the shared jump-arc formula, used by both the ground jump and per-Form
+  air jumps), and `MovementSuppressed` (skips its own WASD/gravity/jump/
+  slide logic entirely — mouse look keeps running — so e.g. ledge mantling
+  can drive the `CharacterController` directly for a few frames).
+- **Sprint-slide** lives directly in `FirstPersonController` since it
+  already owns crouch/sprint state: pressing **C** while sprinting captures
+  current horizontal velocity as a slide direction, boosts it to
+  `slideSpeed`, and decays it over `slideDuration`; releasing **C** early
+  or jumping cancels it.
+- **`AerialMobilityController`** reads the equipped `TransformationForm`'s
+  `aerialMoveType` and, on Space while airborne, performs whichever move
+  that Form defines:
+  - **MultiJump** (Beastkin) — extra jumps in the air, via
+    `PerformJumpImpulse`, refilled on landing.
+  - **Glide** (Emberkin) — clamps `FallSpeedClamp` for `glideDuration` and
+    adds forward drift along the camera's look direction each frame.
+  - **Blink** (Wraithkin) — an instant forward teleport (`CharacterController.Move`),
+    clamped short of any obstacle hit by a forward raycast, on a cooldown.
+- **`LedgeMantleController`** auto-mantles while walking forward into a
+  ledge within reach: a chest-height raycast finds a wall (rejected if its
+  surface normal is too close to "up," so gentle terrain slopes don't
+  misfire as walls), a raycast down from above the wall finds the ledge
+  height, and if it's within `[minMantleHeight, maxMantleHeight]` with
+  headroom to stand, the player is lerped up onto it over `mantleDuration`
+  via `MovementSuppressed` + direct `CharacterController.Move` calls.
+- `GameBootstrap.BuildTraversalTestCourse` places a small staircase (to
+  test mantling) and a gap platform (to test the aerial move) near spawn
+  at `(15, ~, 15)`, purely so these systems have something to try out
+  against. To test Glide or Blink instead of the default MultiJump, swap
+  `SampleFormLibrary.CreateBeastForm()` for `CreateElementalForm()` /
+  `CreateSpectralForm()` in `GameBootstrap.BuildPlayer`.
+
 ### Design intent for "transformation"
 
 Transformation is treated as a **fantasy/sci-fi ability system** — a
@@ -163,8 +207,6 @@ sexual content, and this project won't be extended in that direction.
 
 ## Not yet built
 
-- On-foot movement tech: per-Form aerial move (double-jump/glide/blink),
-  sprint-slide, ledge mantling.
 - Other traversal aids: grapple, fast travel / loading zones.
 - World decoration (trees, rocks, points of interest) — terrain is
   currently bare rolling hills with no scattered props.

@@ -14,6 +14,9 @@ namespace TransformationFPS.UI
         private WeaponController _weapon;
         private TransformationManager _transformation;
         private VehicleMountController _vehicleMount;
+        private FirstPersonController _movement;
+        private AerialMobilityController _aerialMobility;
+        private LedgeMantleController _mantle;
 
         private void Awake()
         {
@@ -21,6 +24,9 @@ namespace TransformationFPS.UI
             _weapon = GetComponent<WeaponController>();
             _transformation = GetComponent<TransformationManager>();
             _vehicleMount = GetComponent<VehicleMountController>();
+            _movement = GetComponent<FirstPersonController>();
+            _aerialMobility = GetComponent<AerialMobilityController>();
+            _mantle = GetComponent<LedgeMantleController>();
         }
 
         private void OnGUI()
@@ -45,7 +51,8 @@ namespace TransformationFPS.UI
 
             if (_transformation.equippedForm != null)
             {
-                GUI.Label(new Rect(pad, y, 500, 24), $"Form: {_transformation.equippedForm.formName}   Ultimate Energy: {_transformation.ultimateEnergy:0}/100{(_transformation.IsTransformed ? "   [TRANSFORMED]" : string.Empty)}");
+                var form = _transformation.equippedForm;
+                GUI.Label(new Rect(pad, y, 500, 24), $"Form: {form.formName}   Ultimate Energy: {_transformation.ultimateEnergy:0}/100{(_transformation.IsTransformed ? "   [TRANSFORMED]" : string.Empty)}");
                 y += 22;
                 GUI.Label(new Rect(pad, y, 600, 24),
                     $"Melee(F): {(_transformation.MeleeCooldownRemaining > 0f ? _transformation.MeleeCooldownRemaining.ToString("0.0") : "Ready")}   " +
@@ -53,9 +60,33 @@ namespace TransformationFPS.UI
                     $"Adaptation(Q): {(_transformation.AdaptationCooldownRemaining > 0f ? _transformation.AdaptationCooldownRemaining.ToString("0.0") : "Ready")}   " +
                     $"Ultimate(X): {(_transformation.ultimateEnergy >= 100f ? "Ready" : "Charging")}");
                 y += 22;
+
+                if (_aerialMobility != null)
+                {
+                    string aerialStatus = form.aerialMoveType switch
+                    {
+                        AerialMoveType.MultiJump => $"Air Jumps: {_aerialMobility.AirJumpsRemaining}/{form.extraAirJumps}",
+                        AerialMoveType.Glide => _aerialMobility.IsGliding ? "Gliding" : "Glide: Ready (Jump while airborne)",
+                        AerialMoveType.Blink => _aerialMobility.BlinkCooldownRemaining > 0f ? $"Blink: {_aerialMobility.BlinkCooldownRemaining:0.0}s" : "Blink: Ready (Jump while airborne)",
+                        _ => string.Empty
+                    };
+                    GUI.Label(new Rect(pad, y, 500, 24), $"Aerial Move ({form.aerialMoveType}): {aerialStatus}");
+                    y += 22;
+                }
             }
 
-            GUI.Label(new Rect(pad, y, 400, 24), "V: Summon/Mount Hover Vehicle");
+            if (_movement != null && _movement.IsSliding)
+            {
+                GUI.Label(new Rect(pad, y, 400, 24), "Sliding");
+                y += 22;
+            }
+            if (_mantle != null && _mantle.IsMantling)
+            {
+                GUI.Label(new Rect(pad, y, 400, 24), "Mantling");
+                y += 22;
+            }
+
+            GUI.Label(new Rect(pad, y, 400, 24), "V: Summon/Mount Hover Vehicle   Sprint+C: Slide");
         }
     }
 }

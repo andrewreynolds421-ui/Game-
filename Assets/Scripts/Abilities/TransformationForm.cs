@@ -9,6 +9,14 @@ namespace TransformationFPS.Abilities
         Spectral    // utility/survivability focused
     }
 
+    /// <summary>The form's defining aerial move - its equivalent of a Destiny class's jump identity.</summary>
+    public enum AerialMoveType
+    {
+        MultiJump,
+        Glide,
+        Blink
+    }
+
     /// <summary>
     /// The Destiny-"subclass"-equivalent: a full kit of four abilities plus passive
     /// stat modifiers and the visual/scale change applied while the Ultimate transformation
@@ -32,6 +40,20 @@ namespace TransformationFPS.Abilities
         public float passiveSpeedMultiplier = 1f;
         public float passiveJumpMultiplier = 1f;
         public float passiveDamageResist01 = 0f; // 0-1, fraction of incoming damage reduced
+
+        [Header("Aerial Mobility (this form's jump identity)")]
+        public AerialMoveType aerialMoveType = AerialMoveType.MultiJump;
+        [Tooltip("MultiJump: extra jumps available in the air, on top of the ground jump.")]
+        public int extraAirJumps = 1;
+        public float airJumpHeightMultiplier = 0.9f;
+        [Tooltip("Glide: how long the slow-fall + forward drift lasts once triggered.")]
+        public float glideDuration = 1.5f;
+        [Tooltip("Glide: fall speed is clamped to this while gliding.")]
+        public float glideFallSpeed = 3f;
+        public float glideForwardSpeed = 9f;
+        [Tooltip("Blink: instant forward teleport distance, clamped by obstacles.")]
+        public float blinkDistance = 12f;
+        public float blinkCooldown = 3f;
 
         [Header("Ultimate Transformation Visuals")]
         [Tooltip("Uniform scale applied to the player body while the Ultimate is active.")]
