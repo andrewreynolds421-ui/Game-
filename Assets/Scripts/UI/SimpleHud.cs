@@ -1,6 +1,7 @@
 using UnityEngine;
 using TransformationFPS.Abilities;
 using TransformationFPS.Player;
+using TransformationFPS.Weapons;
 
 namespace TransformationFPS.UI
 {
@@ -43,9 +44,19 @@ namespace TransformationFPS.UI
             GUI.Label(new Rect(pad, y, 400, 24), $"Health: {_stats.CurrentHealth:0} / {_stats.maxHealth:0}   Shield: {_stats.CurrentShield:0} / {_stats.maxShield:0}");
             y += 22;
 
-            if (_vehicleMount == null || !_vehicleMount.IsMounted)
+            if ((_vehicleMount == null || !_vehicleMount.IsMounted) && _weapon.CurrentWeapon != null)
             {
-                GUI.Label(new Rect(pad, y, 400, 24), $"Ammo: {_weapon.CurrentAmmo}/{_weapon.magazineSize}{(_weapon.IsReloading ? " (reloading)" : string.Empty)}");
+                var weaponInstance = _weapon.CurrentWeapon;
+                var weaponDef = weaponInstance.Definition;
+
+                string reserveText = weaponDef.ammoType == AmmoType.Primary
+                    ? string.Empty
+                    : $"   Reserve: {_weapon.GetReserve(weaponDef.ammoType)}";
+                string stateText = _weapon.IsReloading ? " (reloading)"
+                    : weaponDef.fireMode == FireMode.Charge && _weapon.ChargeProgress01 > 0f ? $" (charging {_weapon.ChargeProgress01:P0})"
+                    : string.Empty;
+
+                GUI.Label(new Rect(pad, y, 600, 24), $"[{_weapon.CurrentSlotIndex + 1}] {weaponDef.weaponName}   Ammo: {weaponInstance.AmmoInMagazine}/{weaponDef.magazineSize}{reserveText}{stateText}");
                 y += 22;
             }
 
@@ -86,7 +97,7 @@ namespace TransformationFPS.UI
                 y += 22;
             }
 
-            GUI.Label(new Rect(pad, y, 400, 24), "V: Summon/Mount Hover Vehicle   Sprint+C: Slide");
+            GUI.Label(new Rect(pad, y, 500, 24), "V: Vehicle   Sprint+C: Slide   1/2/3 or Scroll: Switch Weapon");
         }
     }
 }

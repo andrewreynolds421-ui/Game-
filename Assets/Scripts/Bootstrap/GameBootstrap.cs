@@ -3,6 +3,7 @@ using TransformationFPS.Abilities;
 using TransformationFPS.Enemies;
 using TransformationFPS.Player;
 using TransformationFPS.UI;
+using TransformationFPS.Weapons;
 using TransformationFPS.World;
 
 namespace TransformationFPS.Bootstrap
@@ -92,6 +93,9 @@ namespace TransformationFPS.Bootstrap
 
             var weapon = player.AddComponent<WeaponController>();
             weapon.weaponCamera = cam;
+            weapon.loadout[0] = SampleWeaponLibrary.CreateAutoRifle();
+            weapon.loadout[1] = SampleWeaponLibrary.CreateShotgun();
+            weapon.loadout[2] = SampleWeaponLibrary.CreateRocketLauncher();
 
             var transformationManager = player.AddComponent<TransformationManager>();
             transformationManager.equippedForm = SampleFormLibrary.CreateBeastForm();

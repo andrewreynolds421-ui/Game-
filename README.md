@@ -1,12 +1,12 @@
 # Transformation FPS
 
 An open-world, first-person shooter prototype in the Destiny 2 mold — fast
-movement, a shootable primary weapon, and a Destiny-style subclass kit where
-the "super" is a full-body transformation into a more powerful form.
+movement, a three-slot weapon loadout, and a Destiny-style subclass kit
+where the "super" is a full-body transformation into a more powerful form.
 
 ## Status
 
-Four playable slices so far:
+Five playable slices so far:
 
 - **The transformation ability system** — Destiny-style melee/grenade/class-
   ability/super kit where the super is a full-body transformation.
@@ -18,9 +18,13 @@ Four playable slices so far:
 - **On-foot movement kit** — a per-Form aerial move (double-jump / glide /
   blink, matching Beastkin / Emberkin / Wraithkin), sprint-slide, and
   auto-mantling over ledges.
+- **Weapon variety** — a three-slot Destiny-style loadout across seven
+  weapon archetypes with genuinely different firing behavior (hitscan vs.
+  projectile, full-auto/semi-auto/burst/charge) and a Primary/Special/Heavy
+  ammo economy.
 
-Real content (weapon variety, enemy AI, world decoration) is not built yet —
-see "Not yet built" below.
+Real content (enemy AI, world decoration) is not built yet — see "Not yet
+built" below.
 
 ## Requirements
 
@@ -55,9 +59,11 @@ scene and press Play, no manual GameObject wiring required.
 | C | Crouch |
 | C (while sprinting) | Slide |
 | (walk into a ledge within reach) | Auto-mantle |
-| Left Click | Fire |
+| Left Click | Fire (or charge, on the Fusion Rifle — release when fully charged) |
 | Right Click | Aim down sights |
 | R | Reload |
+| 1 / 2 / 3 | Switch weapon slot |
+| Mouse Scroll | Cycle weapon slot |
 | F | Melee |
 | G | Morph Bolt (grenade-equivalent) |
 | Q | Adaptation (class-ability-equivalent) |
@@ -77,6 +83,7 @@ Assets/Scripts/
                 VehicleMountController, AerialMobilityController, LedgeMantleController
   Abilities/    AbilityDefinition, TransformationForm (ScriptableObjects),
                 TransformationManager, SampleFormLibrary
+  Weapons/      WeaponDefinition, WeaponInstance, ProjectileBehavior, SampleWeaponLibrary
   Enemies/      EnemyDummy — simple respawning combat target
   World/        TerrainNoiseProfile, TerrainChunkBuilder, TerrainStreamingManager
   Vehicles/     HoverVehicleController, VehicleFactory
@@ -103,6 +110,54 @@ Assets/Scripts/
   asset files. In a full content pipeline these would instead be `.asset`
   files created via the Editor's `Create > TransformationFPS > ...` menus
   (the `[CreateAssetMenu]` attributes are already on both classes).
+
+### Weapon variety
+
+- **`WeaponDefinition`** (ScriptableObject) is one weapon's data: archetype
+  (flavor label), `AmmoType` (`Primary`/`Special`/`Heavy`), `FireMode`
+  (`FullAuto`/`SemiAuto`/`Burst`/`Charge`), damage-per-hit, fire rate,
+  magazine/reload/range, spread, and archetype-specific fields (pellets per
+  shot, burst count/delay, charge time, or projectile speed/splash).
+  `damagePerHit` always means "damage from one raycast or projectile hit" —
+  for multi-pellet weapons (shotgun pellets, fusion rifle bolts) it's
+  per-pellet, not the total.
+- **`WeaponInstance`** is the tiny bit of runtime state a definition doesn't
+  carry by itself: current ammo in the magazine. `WeaponController` owns
+  one per loadout slot.
+- **`WeaponController`** (on the player) owns a 3-slot loadout array,
+  switches between them on **1/2/3** or scroll (cancelling any in-progress
+  reload/burst/charge on switch), and fires according to whichever
+  `FireMode` the current slot's definition specifies:
+  - **FullAuto** (Auto Rifle) — fires every `fireRate` interval while held.
+  - **SemiAuto** (Hand Cannon, Shotgun, Sniper Rifle, Rocket Launcher) —
+    one shot per click, still capped by `fireRate` so clicking faster than
+    the weapon's rate does nothing extra.
+  - **Burst** (Pulse Rifle) — one click fires `burstCount` rounds
+    `burstRoundDelay` apart, then the normal `fireRate` cooldown gates the
+    next burst.
+  - **Charge** (Fusion Rifle) — hold to charge for `chargeTime`; releasing
+    before full charge cancels with no shot fired, matching Destiny fusion
+    rifles rather than a simpler "partial charge = partial damage" model.
+  - Hitscan weapons raycast per pellet with random cone spread (tightened
+    while aiming, via `adsSpreadMultiplier`); the Rocket Launcher instead
+    spawns a **`ProjectileBehavior`** that travels, raycasts its own path
+    each frame, and on impact deals falloff splash damage via
+    `Physics.OverlapSphere` to everything `IDamageable` in range —
+    including the player, if they're standing too close when it detonates.
+    That self-damage is intentional (a real risk/reward of point-blank
+    rocket shots), not an oversight.
+  - Ammo: `Primary` reserve is treated as unlimited (reload always tops
+    off); `Special` and `Heavy` draw from small shared pools
+    (`specialReserve`, `heavyReserve`) that only deplete — there's no pickup
+    system yet, so once they're out, that slot's magazine can't refill
+    until the pools are replenished by hand.
+- **`SampleWeaponLibrary`** builds seven archetypes in code (same pattern
+  as `SampleFormLibrary`): Auto Rifle, Hand Cannon, Pulse Rifle, Shotgun,
+  Sniper Rifle, Rocket Launcher, Fusion Rifle. `GameBootstrap.BuildPlayer`
+  equips Auto Rifle / Shotgun / Rocket Launcher by default — one weapon per
+  ammo type, so the reserve economy is visible immediately. Swap in
+  `CreateHandCannon()`, `CreatePulseRifle()`, `CreateSniperRifle()`, or
+  `CreateFusionRifle()` there to try the rest.
 
 ### Open-world terrain streaming
 
@@ -210,7 +265,10 @@ sexual content, and this project won't be extended in that direction.
 - Other traversal aids: grapple, fast travel / loading zones.
 - World decoration (trees, rocks, points of interest) — terrain is
   currently bare rolling hills with no scattered props.
-- Real weapon variety / loadout system.
+- Ammo pickups — Special/Heavy reserves currently only ever go down.
+- First/third-person weapon models and viewmodel animation — weapons are
+  currently invisible (only their effects are visible: hit markers via
+  damage, tracer-free hitscan, and the Rocket Launcher's projectile).
 - Enemy AI (current dummies are stationary targets, and are placed near the
   world origin rather than distributed across streamed chunks).
 - Real UI (current HUD is `OnGUI` debug text).
